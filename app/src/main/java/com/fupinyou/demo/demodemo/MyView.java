@@ -1,160 +1,143 @@
 package com.fupinyou.demo.demodemo;
 
 import android.content.Context;
-import android.content.res.TypedArray;
+import android.content.res.Resources;
+import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.drawable.Drawable;
-import android.util.AttributeSet;
-import android.view.Gravity;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.view.View;
-import android.widget.Button;
-import android.widget.RelativeLayout;
-import android.widget.TextView;
+import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 
 /**
  * Created by fupinyou on 2016/7/18.
  * blog address:http://www.fupinyou.com
  */
-public class MyView extends RelativeLayout {
-    private Drawable mLeftBackgroud;
-    private String mLeftText;
-    private int mLeftTextColor;
-    private String mTitleText;
-    private float mTitleSize;
-    private int mTileTextColor;
-    private int mRightTextColor;
-    private String mRightText;
-    private Drawable mRightBackground;
-    private Button mLeftButton;
-    private Button mRightButton;
-    private TextView mTitleView;
-    private LayoutParams mRightParams;
-    private LayoutParams mLeftParams;
-    private LayoutParams mTitleParams;
-    private topBarClickListener mListener;
-    public static final int LEFT_BUTTUN=0;
-    public static final int RIGHT_BUTTUN=1;
-    public MyView(Context context) {
-        this(context,null);
+public class MyView extends View {
+    private Paint mPaint_white;
+    private Paint mPaint_black;
+    private float unitage;
+    private RectF mRectf;
+    private int score;
+    private float arc_y = 0f;
+    private int score_text=0;
+
+    public MyView(Context context, int score) {
+        super(context);
+        init(score);
     }
 
-    public MyView(Context context, AttributeSet attrs) {
-        this(context, attrs,0);
-    }
+    private void init(int score) {
+        this.score=score;
+        Resources res = getResources();
+        //以10dp作为单位量
+        unitage = res.getDimension(R.dimen.unitage);
 
-    public MyView(Context context, AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-        TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.MyView);
-        initView(ta);
-        addView(context);
-        bindEvents();
-    }
+        //初始黑色笔
+        mPaint_black = new Paint();
+        //设置抗锯齿，优化绘制效果的精细度
+        mPaint_black.setAntiAlias(true);
+        //设置图像抖动处理,也是用于优化图像的显示效果
+        mPaint_black.setDither(true);
+        //设置画笔的颜色
+        mPaint_black.setColor(Color.BLACK);
+        //设置画笔的风格为空心
+        mPaint_black.setStyle(Paint.Style.STROKE);
+        //设置“空心”的外框宽度为2dp
+        mPaint_black.setStrokeWidth(unitage*0.2f);
 
-    private void initView(TypedArray ta){
-        mLeftBackgroud = ta.getDrawable(R.styleable.MyView_leftBackground);
-        mLeftText = ta.getString(R.styleable.MyView_leftText);
-        mLeftTextColor = ta.getColor(R.styleable.MyView_leftTextColor, Color.BLACK);
-        mTitleText = ta.getString(R.styleable.MyView_myTitle);
-        mTitleSize = ta.getDimension(R.styleable.MyView_myTitleTextSize, 15);
-        mTileTextColor = ta.getColor(R.styleable.MyView_myTitleTextColor, Color.BLACK);
-        mRightTextColor = ta.getColor(R.styleable.MyView_rightTextColor, Color.BLACK);
-        mRightText = ta.getString(R.styleable.MyView_rightText);
-        mRightBackground = ta.getDrawable(R.styleable.MyView_rightBackground);
-        //最后一定要调用recycle()来对ta进行回收，避免重新创建的错误
-        ta.recycle();
-    }
+        //初始白色笔
+        mPaint_white = new Paint();
+        mPaint_white.setAntiAlias(true);
+        mPaint_white.setStyle(Paint.Style.STROKE);
+        mPaint_white.setStrokeWidth(unitage*0.2f);
+        mPaint_white.setDither(true);
+        //设置文本的字号大小
+        mPaint_white.setTextSize(unitage*6);
+        //设置文本的对其方式为水平居中
+        mPaint_white.setTextAlign(Paint.Align.CENTER);
+        mPaint_white.setColor(Color.WHITE);
 
-    private void addView(Context context) {
-        mLeftButton = new Button(context);
-        mRightButton = new Button(context);
-        mTitleView = new TextView(context);
+        //设置整个控件的宽高配置参数
+        setLayoutParams(new ViewGroup.LayoutParams((int)(unitage*19.5f),(int)(unitage*19.5f)));
 
-        //为创建的组建元素赋值
-        //值就来源于我们引用的ml文件中给对应属性的赋值
-        mLeftButton.setText(mLeftText);
-        mLeftButton.setTextColor(mLeftTextColor);
-        mLeftButton.setBackground(mLeftBackgroud);
+        //初始化圆弧所需条件（及设置圆弧的外接矩形的四边）
+        mRectf = new RectF();
+        mRectf.set(unitage*0.5f,unitage*0.5f,unitage*18.5f,unitage*18.5f);
 
-        mRightButton.setBackground(mRightBackground);
-        mRightButton.setText(mRightText);
-        mRightButton.setTextColor(mRightTextColor);
-
-        mTitleView.setText(mTitleText);
-        mTitleView.setTextColor(mTileTextColor);
-        mTitleView.setTextSize(mTitleSize);
-        mTitleView.setGravity(Gravity.CENTER);
-
-        //为每一个组件设置相应的布局参数
-        mRightParams = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        mRightParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT,TRUE);
-        addView(mRightButton,mRightParams);
-
-        mLeftParams = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        mLeftParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT,TRUE);
-        addView(mLeftButton,mLeftParams);
-
-        mTitleParams = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        mTitleParams.addRule(RelativeLayout.CENTER_IN_PARENT,TRUE);
-        addView(mTitleView,mTitleParams);
-
-
-    }
-
-    private interface topBarClickListener{
-        //左边的点击事件
-        void leftClick();
-        //右边按钮的点击事件
-        void rightClick();
-    }
-
-    private void bindEvents() {
-        //按钮的点击事件不需要具体的实现，调用接口的时候，会有具体的实现
-        mLeftButton.setOnClickListener(new OnClickListener() {
+        //获取该view的视图树观察者并添加绘制变化监听者
+        //实现有绘制变化时的回调方法
+        this.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
             @Override
-            public void onClick(View v) {
-                if(mListener!=null){
-                    mListener.leftClick();
-                }
-            }
-        });
-        mRightButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(mListener!=null){
-                    mListener.rightClick();
-                }
+            public boolean onPreDraw() {
+                //2.开启子线程对绘制用到的数据进行修改
+                new DrawThread();
+                getViewTreeObserver().removeOnPreDrawListener(this);
+                return false;
             }
         });
     }
 
-    /**
-     * 暴露一个接口供调用者来注册接口回调
-     * 通过接口来获得回调这对接口方法的实现
-     */
-    public void setOnTopbarClickListener(topBarClickListener mListener){
-        this.mListener=mListener;
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        //3.绘制数据
+
+        //绘制弧形
+        //黑笔画的是一个整圆所有从哪里开始都一样
+        canvas.drawArc(mRectf,0,360,false,mPaint_black);
+        //白笔之所以从-90度开始，是因为0度其实使我们的3点钟的位置，所以-90才是我们的0点的位置
+        canvas.drawArc(mRectf,-90,arc_y,false,mPaint_white);
+        //绘制文本
+        canvas.drawText(score_text+"",unitage*9.7f,unitage*11.0f,mPaint_white);
+
+        //到此整个自定义View就已经写完了
     }
 
+    public class DrawThread implements Runnable {
+        //2.开启子线程,并在绘制监听的回调方法中实现实时更新绘制数据
+        private final Thread mDrawThread;
+        private int state;
+        int count=0;
 
-    /**
-     * 设置按钮的显示与否，通过id区分按钮，flag区分是否显示
-     */
-    public void setButtonVisable(int ChidView,boolean flag){
-        switch (ChidView){
-            case LEFT_BUTTUN:
-                if (flag==false){
-                    mLeftButton.setVisibility(View.VISIBLE);
-                }else{
-                    mLeftButton.setVisibility(View.GONE);
+
+        public DrawThread() {
+            mDrawThread = new Thread(this);
+            mDrawThread.start();
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                switch (state) {
+                    case 0://开始时给一点点缓冲的时间
+                        try {
+                            Thread.sleep(1000);
+                            state = 1;
+                        } catch (InterruptedException e) {
+
+                        }
+                        break;
+                    case 1:
+                        try {//更新显示的数据
+                            Thread.sleep(20);
+                            arc_y += 3.6f;
+                            score_text++;
+                            count++;
+                            postInvalidate();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        break;
                 }
-                break;
-            case RIGHT_BUTTUN:
-                if (flag==false){
-                    mRightButton.setVisibility(View.VISIBLE);
-                }else{
-                    mRightButton.setVisibility(View.GONE);
+                if (count >= score)//满足该条件就结束循环
+                {
+                    count=0;
+                    score_text=0;
                 }
-                break;
+            }
+
         }
     }
 }
